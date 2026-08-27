@@ -1,1 +1,320 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>Votação - Noite da Pizza</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #ff7b00, #ffb300);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.container {
+  width: 100%;
+  max-width: 500px;
+  background: white;
+  border-radius: 25px;
+  padding: 25px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+}
+
+.pizza {
+  font-size: 90px;
+  margin-bottom: 5px;
+}
+
+h1 {
+  color: #e65100;
+  font-size: 32px;
+  margin: 5px 0;
+}
+
+.subtitulo {
+  color: #555;
+  font-size: 18px;
+  margin-bottom: 25px;
+}
+
+.nome {
+  width: 100%;
+  padding: 15px;
+  font-size: 18px;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  outline: none;
+}
+
+.nome:focus {
+  border-color: #ff7b00;
+}
+
+.horario {
+  display: block;
+  width: 100%;
+  padding: 17px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 15px;
+  background: #fff3e0;
+  color: #e65100;
+  font-size: 22px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.horario:hover {
+  background: #ffe0b2;
+}
+
+.horario.selecionado {
+  background: #ff7b00;
+  color: white;
+}
+
+.votar {
+  width: 100%;
+  padding: 17px;
+  margin-top: 20px;
+  border: none;
+  border-radius: 15px;
+  background: #e65100;
+  color: white;
+  font-size: 21px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.votar:hover {
+  background: #bf360c;
+}
+
+#mensagem {
+  margin-top: 20px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.resultados {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 2px solid #eee;
+}
+
+.resultado {
+  margin: 12px 0;
+  text-align: left;
+}
+
+.barra {
+  height: 25px;
+  background: #eee;
+  border-radius: 15px;
+  overflow: hidden;
+  margin-top: 5px;
+}
+
+.progresso {
+  height: 100%;
+  background: #ff7b00;
+  width: 0%;
+  transition: width 0.5s;
+}
+
+.pequeno {
+  color: #777;
+  font-size: 14px;
+  margin-top: 20px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="pizza">🍕</div>
+
+  <h1>NOITE DA PIZZA</h1>
+
+  <div class="subtitulo">
+    🗳️ Escolha o melhor horário!
+  </div>
+
+  <input
+    type="text"
+    id="nome"
+    class="nome"
+    placeholder="Digite seu nome"
+    maxlength="30"
+  >
+
+  <button class="horario" onclick="selecionarHorario('17:00', this)">
+    ⏰ 17:00
+  </button>
+
+  <button class="horario" onclick="selecionarHorario('18:00', this)">
+    ⏰ 18:00
+  </button>
+
+  <button class="horario" onclick="selecionarHorario('19:00', this)">
+    ⏰ 19:00
+  </button>
+
+  <button class="horario" onclick="selecionarHorario('20:00', this)">
+    ⏰ 20:00
+  </button>
+
+  <button class="votar" onclick="votar()">
+    🍕 VOTAR
+  </button>
+
+  <div id="mensagem"></div>
+
+  <div class="resultados">
+
+    <h2>📊 Resultado</h2>
+
+    <div class="resultado">
+      <b>17:00 — <span id="v17">0</span> votos</b>
+      <div class="barra">
+        <div class="progresso" id="p17"></div>
+      </div>
+    </div>
+
+    <div class="resultado">
+      <b>18:00 — <span id="v18">0</span> votos</b>
+      <div class="barra">
+        <div class="progresso" id="p18"></div>
+      </div>
+    </div>
+
+    <div class="resultado">
+      <b>19:00 — <span id="v19">0</span> votos</b>
+      <div class="barra">
+        <div class="progresso" id="p19"></div>
+      </div>
+    </div>
+
+    <div class="resultado">
+      <b>20:00 — <span id="v20">0</span> votos</b>
+      <div class="barra">
+        <div class="progresso" id="p20"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="pequeno">
+    🍕 Que vença o melhor horário! 😋
+  </div>
+
+</div>
+
+<script>
+
+let horarioEscolhido = "";
+
+let votos = {
+  "17:00": 0,
+  "18:00": 0,
+  "19:00": 0,
+  "20:00": 0
+};
+
+function selecionarHorario(horario, botao) {
+
+  horarioEscolhido = horario;
+
+  let botoes = document.querySelectorAll(".horario");
+
+  botoes.forEach(function(b) {
+    b.classList.remove("selecionado");
+  });
+
+  botao.classList.add("selecionado");
+}
+
+function votar() {
+
+  let nome = document.getElementById("nome").value.trim();
+
+  if (nome === "") {
+    mostrarMensagem("⚠️ Digite seu nome primeiro!");
+    return;
+  }
+
+  if (horarioEscolhido === "") {
+    mostrarMensagem("⚠️ Escolha um horário!");
+    return;
+  }
+
+  votos[horarioEscolhido]++;
+
+  mostrarResultados();
+
+  mostrarMensagem(
+    "🍕 Obrigado, " + nome + "! Seu voto foi registrado para " + horarioEscolhido + "."
+  );
+
+  document.getElementById("nome").value = "";
+
+  horarioEscolhido = "";
+
+  document.querySelectorAll(".horario").forEach(function(b) {
+    b.classList.remove("selecionado");
+  });
+}
+
+function mostrarMensagem(texto) {
+  document.getElementById("mensagem").innerHTML = texto;
+}
+
+function mostrarResultados() {
+
+  let total =
+    votos["17:00"] +
+    votos["18:00"] +
+    votos["19:00"] +
+    votos["20:00"];
+
+  document.getElementById("v17").innerText = votos["17:00"];
+  document.getElementById("v18").innerText = votos["18:00"];
+  document.getElementById("v19").innerText = votos["19:00"];
+  document.getElementById("v20").innerText = votos["20:00"];
+
+  if (total === 0) {
+    return;
+  }
+
+  document.getElementById("p17").style.width =
+    (votos["17:00"] / total * 100) + "%";
+
+  document.getElementById("p18").style.width =
+    (votos["18:00"] / total * 100) + "%";
+
+  document.getElementById("p19").style.width =
+    (votos["19:00"] / total * 100) + "%";
+
+  document.getElementById("p20").style.width =
+    (votos["20:00"] / total * 100) + "%";
+}
+
+</script>
+
+</body>
+</html>
