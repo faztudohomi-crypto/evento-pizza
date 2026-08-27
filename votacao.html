@@ -58,10 +58,6 @@ h1 {
   outline: none;
 }
 
-.nome:focus {
-  border-color: #ff7b00;
-}
-
 .horario {
   display: block;
   width: 100%;
@@ -134,6 +130,45 @@ h1 {
   background: #eee;
   cursor: pointer;
   font-size: 16px;
+}
+
+/* ADMIN */
+
+.admin {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 2px solid #eee;
+}
+
+.admin input {
+  width: 100%;
+  padding: 13px;
+  margin-top: 10px;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  font-size: 17px;
+}
+
+.admin button {
+  width: 100%;
+  padding: 13px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 10px;
+  background: #444;
+  color: white;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+#painelAdmin {
+  display: none;
+  margin-top: 15px;
+}
+
+#mensagemAdmin {
+  margin-top: 10px;
+  font-weight: bold;
 }
 </style>
 </head>
@@ -218,7 +253,43 @@ maxlength="30"
 
 </div>
 
+
+<!-- ADMINISTRADOR -->
+
+<div class="admin">
+
+<h3>🔐 Administrador</h3>
+
+<input
+type="password"
+id="senhaAdmin"
+placeholder="Senha do administrador"
+>
+
+<button onclick="entrarAdmin()">
+🔓 Entrar
+</button>
+
+<div id="painelAdmin">
+
+<p>✅ Acesso de administrador liberado.</p>
+
+<button onclick="testarAdmin()">
+🧪 Testar acesso
+</button>
+
+<button onclick="sairAdmin()">
+🚪 Sair
+</button>
+
 </div>
+
+<div id="mensagemAdmin"></div>
+
+</div>
+
+</div>
+
 
 <script>
 
@@ -230,205 +301,318 @@ const SUPABASE_KEY =
 
 let horarioEscolhido = "";
 
+let administrador = false;
+
+
+/* =========================
+   ESCOLHER HORÁRIO
+========================= */
 
 function selecionarHorario(horario, botao) {
 
-  horarioEscolhido = horario;
+horarioEscolhido = horario;
 
-  document.querySelectorAll(".horario").forEach(function(b) {
-    b.classList.remove("selecionado");
-  });
+document.querySelectorAll(".horario").forEach(function(b) {
+b.classList.remove("selecionado");
+});
 
-  botao.classList.add("selecionado");
+botao.classList.add("selecionado");
 }
 
+
+/* =========================
+   VOTAR
+========================= */
 
 async function votar() {
 
-  const nome =
-    document.getElementById("nome").value.trim();
+const nome =
+document.getElementById("nome").value.trim();
 
-  if (nome === "") {
-    mostrarMensagem("⚠️ Digite seu nome!");
-    return;
-  }
-
-  if (horarioEscolhido === "") {
-    mostrarMensagem("⚠️ Escolha um horário!");
-    return;
-  }
-
-  mostrarMensagem("⏳ Registrando seu voto...");
-
-  try {
-
-    const resposta = await fetch(
-      SUPABASE_URL + "/rest/v1/votos",
-      {
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SUPABASE_KEY,
-          "Authorization": "Bearer " + SUPABASE_KEY,
-          "Prefer": "return=minimal"
-        },
-
-        body: JSON.stringify({
-          nome: nome,
-          horario: horarioEscolhido
-        })
-      }
-    );
-
-    if (!resposta.ok) {
-
-      const erro = await resposta.text();
-
-      console.log(erro);
-
-      mostrarMensagem(
-        "❌ ERRO: " + erro
-      );
-
-      return;
-    }
-
-    mostrarMensagem(
-      "✅ Voto registrado! Obrigado, " +
-      nome + "! 🍕"
-    );
-
-    document.getElementById("nome").value = "";
-
-    horarioEscolhido = "";
-
-    document.querySelectorAll(".horario").forEach(function(b) {
-      b.classList.remove("selecionado");
-    });
-
-    carregarVotos();
-
-  } catch (erro) {
-
-    console.log(erro);
-
-    mostrarMensagem(
-      "❌ Erro de conexão com o servidor."
-    );
-
-  }
+if (nome === "") {
+mostrarMensagem("⚠️ Digite seu nome!");
+return;
 }
 
+if (horarioEscolhido === "") {
+mostrarMensagem("⚠️ Escolha um horário!");
+return;
+}
+
+mostrarMensagem("⏳ Registrando seu voto...");
+
+try {
+
+const resposta = await fetch(
+SUPABASE_URL + "/rest/v1/votos",
+{
+method: "POST",
+
+headers: {
+"Content-Type": "application/json",
+"apikey": SUPABASE_KEY,
+"Authorization": "Bearer " + SUPABASE_KEY,
+"Prefer": "return=minimal"
+},
+
+body: JSON.stringify({
+nome: nome,
+horario: horarioEscolhido
+})
+}
+);
+
+if (!resposta.ok) {
+
+const erro = await resposta.text();
+
+console.log(erro);
+
+mostrarMensagem(
+"❌ ERRO: " + erro
+);
+
+return;
+}
+
+mostrarMensagem(
+"✅ Voto registrado! Obrigado, " +
+nome + "! 🍕"
+);
+
+document.getElementById("nome").value = "";
+
+horarioEscolhido = "";
+
+document.querySelectorAll(".horario").forEach(function(b) {
+b.classList.remove("selecionado");
+});
+
+carregarVotos();
+
+} catch (erro) {
+
+console.log(erro);
+
+mostrarMensagem(
+"❌ Erro de conexão com o servidor."
+);
+
+}
+}
+
+
+/* =========================
+   CARREGAR VOTOS
+========================= */
 
 async function carregarVotos() {
 
-  try {
+try {
 
-    const resposta = await fetch(
-      SUPABASE_URL +
-      "/rest/v1/votos?select=horario",
-      {
-        method: "GET",
+const resposta = await fetch(
+SUPABASE_URL +
+"/rest/v1/votos?select=horario",
+{
+method: "GET",
 
-        headers: {
-          "apikey": SUPABASE_KEY,
-          "Authorization": "Bearer " + SUPABASE_KEY
-        }
-      }
-    );
+headers: {
+"apikey": SUPABASE_KEY,
+"Authorization": "Bearer " + SUPABASE_KEY
+}
+}
+);
 
-    if (!resposta.ok) {
+if (!resposta.ok) {
 
-      const erro = await resposta.text();
+console.log(await resposta.text());
 
-      console.log("Erro ao buscar votos:", erro);
-
-      mostrarMensagem(
-        "❌ Não foi possível carregar os resultados."
-      );
-
-      return;
-    }
-
-    const dados = await resposta.json();
-
-    let votos = {
-      "17:00": 0,
-      "18:00": 0,
-      "19:00": 0,
-      "20:00": 0
-    };
-
-    dados.forEach(function(voto) {
-
-      if (votos[voto.horario] !== undefined) {
-        votos[voto.horario]++;
-      }
-
-    });
-
-    mostrarResultados(votos);
-
-  } catch (erro) {
-
-    console.log("Erro:", erro);
-
-    mostrarMensagem(
-      "❌ Erro ao carregar resultados."
-    );
-
-  }
+return;
 }
 
+const dados = await resposta.json();
+
+let votos = {
+"17:00": 0,
+"18:00": 0,
+"19:00": 0,
+"20:00": 0
+};
+
+dados.forEach(function(voto) {
+
+if (votos[voto.horario] !== undefined) {
+votos[voto.horario]++;
+}
+
+});
+
+mostrarResultados(votos);
+
+} catch (erro) {
+
+console.log(erro);
+
+}
+}
+
+
+/* =========================
+   MOSTRAR RESULTADOS
+========================= */
 
 function mostrarResultados(votos) {
 
-  let total =
-    votos["17:00"] +
-    votos["18:00"] +
-    votos["19:00"] +
-    votos["20:00"];
+let total =
+votos["17:00"] +
+votos["18:00"] +
+votos["19:00"] +
+votos["20:00"];
 
-  document.getElementById("v17").innerText =
-    votos["17:00"];
+document.getElementById("v17").innerText =
+votos["17:00"];
 
-  document.getElementById("v18").innerText =
-    votos["18:00"];
+document.getElementById("v18").innerText =
+votos["18:00"];
 
-  document.getElementById("v19").innerText =
-    votos["19:00"];
+document.getElementById("v19").innerText =
+votos["19:00"];
 
-  document.getElementById("v20").innerText =
-    votos["20:00"];
+document.getElementById("v20").innerText =
+votos["20:00"];
 
-
-  if (total === 0) {
-    return;
-  }
-
-
-  document.getElementById("p17").style.width =
-    (votos["17:00"] / total * 100) + "%";
-
-  document.getElementById("p18").style.width =
-    (votos["18:00"] / total * 100) + "%";
-
-  document.getElementById("p19").style.width =
-    (votos["19:00"] / total * 100) + "%";
-
-  document.getElementById("p20").style.width =
-    (votos["20:00"] / total * 100) + "%";
+if (total === 0) {
+return;
 }
 
+document.getElementById("p17").style.width =
+(votos["17:00"] / total * 100) + "%";
+
+document.getElementById("p18").style.width =
+(votos["18:00"] / total * 100) + "%";
+
+document.getElementById("p19").style.width =
+(votos["19:00"] / total * 100) + "%";
+
+document.getElementById("p20").style.width =
+(votos["20:00"] / total * 100) + "%";
+}
+
+
+/* =========================
+   MENSAGEM
+========================= */
 
 function mostrarMensagem(texto) {
 
-  document.getElementById("mensagem").innerHTML =
-    texto;
+document.getElementById("mensagem").innerHTML =
+texto;
 
 }
 
+
+/* =========================
+   ADMINISTRADOR
+========================= */
+
+async function entrarAdmin() {
+
+const senha =
+document.getElementById("senhaAdmin").value;
+
+if (senha === "") {
+
+document.getElementById("mensagemAdmin").innerHTML =
+"⚠️ Digite a senha.";
+
+return;
+}
+
+try {
+
+const resposta = await fetch(
+SUPABASE_URL +
+"/rest/v1/rpc/testar_admin",
+{
+method: "POST",
+
+headers: {
+"Content-Type": "application/json",
+"apikey": SUPABASE_KEY,
+"Authorization": "Bearer " + SUPABASE_KEY
+},
+
+body: JSON.stringify({
+senha: senha
+})
+}
+);
+
+if (!resposta.ok) {
+
+document.getElementById("mensagemAdmin").innerHTML =
+"❌ Senha incorreta.";
+
+return;
+}
+
+administrador = true;
+
+document.getElementById("painelAdmin").style.display =
+"block";
+
+document.getElementById("mensagemAdmin").innerHTML =
+"✅ Administrador autenticado!";
+
+document.getElementById("senhaAdmin").value = "";
+
+} catch (erro) {
+
+console.log(erro);
+
+document.getElementById("mensagemAdmin").innerHTML =
+"❌ Erro de conexão.";
+
+}
+}
+
+
+/* =========================
+   TESTAR ADMIN
+========================= */
+
+function testarAdmin() {
+
+if (administrador) {
+
+document.getElementById("mensagemAdmin").innerHTML =
+"🔐 Acesso de administrador funcionando!";
+
+}
+
+}
+
+
+/* =========================
+   SAIR
+========================= */
+
+function sairAdmin() {
+
+administrador = false;
+
+document.getElementById("painelAdmin").style.display =
+"none";
+
+document.getElementById("mensagemAdmin").innerHTML =
+"🚪 Você saiu do modo administrador.";
+
+}
+
+
+/* =========================
+   INICIAR
+========================= */
 
 carregarVotos();
 
