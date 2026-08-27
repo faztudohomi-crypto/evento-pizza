@@ -429,13 +429,106 @@ let timerInterval = null;
 
 
 /* =====================================================
+   VERIFICAR TIMER SALVO
+===================================================== */
+
+function carregarTimerSalvo() {
+
+  const salvo =
+    localStorage.getItem(
+      "fimVotacaoPizza"
+    );
+
+
+  if (!salvo) {
+
+    return;
+  }
+
+
+  const valor =
+    parseInt(salvo);
+
+
+  if (
+    isNaN(valor)
+  ) {
+
+    localStorage.removeItem(
+      "fimVotacaoPizza"
+    );
+
+    return;
+  }
+
+
+  if (
+    Date.now() >= valor
+  ) {
+
+    localStorage.removeItem(
+      "fimVotacaoPizza"
+    );
+
+    encerrarVotacao();
+
+    return;
+  }
+
+
+  fimVotacao = valor;
+
+  iniciarTimer();
+}
+
+
+/* =====================================================
    ESCOLHER HORÁRIO
 ===================================================== */
 
 function selecionarHorario(horario, botao) {
 
   if (
-    fimVotacao !== null &&
+    fimVotacao === null ||
+    Date.now() >= fimVotacao
+  ) {
+
+    mostrarMensagem(
+      "🔒 A votação não está aberta."
+    );
+
+    return;
+  }
+
+
+  horarioEscolhido = horario;
+
+
+  document
+  .querySelectorAll(".horario")
+  .forEach(function(b) {
+
+    b.classList.remove(
+      "selecionado"
+    );
+
+  });
+
+
+  botao.classList.add(
+    "selecionado"
+  );
+}
+
+
+/* =====================================================
+   VOTAR
+===================================================== */
+
+async function votar() {
+
+  if (
+    fimVotacao === null ||
     Date.now() >= fimVotacao
   ) {
 
@@ -446,41 +539,13 @@ function selecionarHorario(horario, botao) {
     return;
   }
 
-  horarioEscolhido = horario;
-
-  document
-  .querySelectorAll(".horario")
-  .forEach(function(b) {
-
-    b.classList.remove("selecionado");
-
-  });
-
-  botao.classList.add("selecionado");
-}
-
-
-/* =====================================================
-   VOTAR
-===================================================== */
-
-async function votar() {
-
-  if (fimVotacao !== null &&
-      Date.now() >= fimVotacao) {
-
-    mostrarMensagem(
-      "🔒 A votação está encerrada."
-    );
-
-    return;
-  }
 
   const nome =
     document
     .getElementById("nome")
     .value
     .trim();
+
 
   if (nome === "") {
 
@@ -491,6 +556,7 @@ async function votar() {
     return;
   }
 
+
   if (horarioEscolhido === "") {
 
     mostrarMensagem(
@@ -500,9 +566,11 @@ async function votar() {
     return;
   }
 
+
   mostrarMensagem(
     "⏳ Registrando seu voto..."
   );
+
 
   try {
 
@@ -798,7 +866,9 @@ async function entrarAdmin() {
   if (senha === "") {
 
     document
-    .getElementById("mensagemAdmin")
+    .getElementById(
+      "mensagemAdmin"
+    )
     .innerHTML =
     "⚠️ Digite a senha.";
 
@@ -807,7 +877,9 @@ async function entrarAdmin() {
 
 
   document
-  .getElementById("mensagemAdmin")
+  .getElementById(
+    "mensagemAdmin"
+  )
   .innerHTML =
   "⏳ Verificando senha...";
 
@@ -1014,13 +1086,20 @@ async function iniciarVotacao() {
 
 
     /*
-      IMPORTANTE:
-      O contador começa imediatamente.
+      O término é salvo no navegador.
+      Assim, atualizar a página não reinicia
+      a contagem.
     */
 
     fimVotacao =
       Date.now() +
       (60 * 60 * 1000);
+
+
+    localStorage.setItem(
+      "fimVotacaoPizza",
+      fimVotacao.toString()
+    );
 
 
     iniciarTimer();
@@ -1078,6 +1157,39 @@ function liberarCampos() {
 
 
 /* =====================================================
+   BLOQUEAR CAMPOS
+===================================================== */
+
+function bloquearCampos() {
+
+  document
+  .getElementById("nome")
+  .disabled = true;
+
+
+  document
+  .querySelectorAll(".horario")
+  .forEach(function(b) {
+
+    b.disabled = true;
+
+    b.classList.remove(
+      "selecionado"
+    );
+
+  });
+
+
+  document
+  .querySelector(".votar")
+  .disabled = true;
+
+
+  horarioEscolhido = "";
+}
+
+
+/* =====================================================
    TIMER
 ===================================================== */
 
@@ -1091,6 +1203,8 @@ function iniciarTimer() {
 
   }
 
+
+  liberarCampos();
 
   atualizarTimer();
 
@@ -1110,6 +1224,13 @@ function iniciarTimer() {
 function atualizarTimer() {
 
   if (fimVotacao === null) {
+
+    document
+    .getElementById(
+      "contador"
+    )
+    .innerText =
+    "--:--:--";
 
     return;
   }
@@ -1209,6 +1330,11 @@ function encerrarVotacao() {
   fimVotacao = null;
 
 
+  localStorage.removeItem(
+    "fimVotacaoPizza"
+  );
+
+
   if (timerInterval !== null) {
 
     clearInterval(
@@ -1241,30 +1367,7 @@ function encerrarVotacao() {
   "none";
 
 
-  document
-  .getElementById("nome")
-  .disabled = true;
-
-
-  document
-  .querySelectorAll(".horario")
-  .forEach(function(b) {
-
-    b.disabled = true;
-
-    b.classList.remove(
-      "selecionado"
-    );
-
-  });
-
-
-  document
-  .querySelector(".votar")
-  .disabled = true;
-
-
-  horarioEscolhido = "";
+  bloquearCampos();
 
 
   mostrarMensagem(
@@ -1446,6 +1549,8 @@ function sairAdmin() {
 ===================================================== */
 
 carregarVotos();
+
+carregarTimerSalvo();
 
 </script>
 
