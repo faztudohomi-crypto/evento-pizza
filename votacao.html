@@ -1478,19 +1478,17 @@ async function zerarVotacao() {
 
     if (!resposta.ok) {
 
-      console.log(
-        await resposta.text()
-      );
+  const erro = await resposta.text();
 
-      document
-      .getElementById(
-        "mensagemAdmin"
-      )
-      .innerHTML =
-      "❌ Senha incorreta ou erro ao zerar.";
+  console.log("ERRO AO ZERAR:", erro);
 
-      return;
-    }
+  document
+  .getElementById("mensagemAdmin")
+  .innerHTML =
+  "❌ ERRO AO ZERAR:<br>" + erro;
+
+  return;
+}
 
 
     document
