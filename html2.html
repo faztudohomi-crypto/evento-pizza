@@ -1,1 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Votação Online - Noite da Pizza</title>
+  
+  <!-- Supabase JS Client via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #ff7b00, #ffb300);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .container {
+      width: 100%;
+      max-width: 500px;
+      background: white;
+      border-radius: 25px;
+      padding: 25px;
+      text-align: center;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    }
+    .pizza { font-size: 90px; }
+    h1 { color: #e65100; font-size: 32px; margin: 5px 0; }
+    .subtitulo { color: #555; font-size: 18px; margin-bottom: 25px; }
+    .nome {
+      width: 100%;
+      padding: 15px;
+      font-size: 18px;
+      border: 2px solid #ddd;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      outline: none;
+    }
+    .horario {
+      display: block;
+      width: 100%;
+      padding: 17px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 15px;
+      background: #fff3e0;
+      color: #e65100;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .horario.selecionado { background: #ff7b00; color: white; }
+    .votar {
+      width: 100%;
+      padding: 17px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 15px;
+      background: #e65100;
+      color: white;
+      font-size: 21px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .votar:disabled, .horario:disabled { opacity: 0.5; cursor: not-allowed; }
+    #mensagem { margin-top: 20px; font-size: 18px; font-weight: bold; }
+    .resultados { margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee; }
+    .resultado { margin: 14px 0; text-align: left; }
+    .barra {
+      height: 25px;
+      background: #eee;
+      border-radius: 15px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+    .progresso {
+      height: 100%;
+      background: #ff7b00;
+      width: 0%;
+      transition: width 0.5s ease-in-out;
+    }
+    
+    /* TIMER */
+    .timer { margin: 20px 0; padding: 15px; background: #fff3e0; border-radius: 15px; }
+    .timerTitulo { color: #e65100; font-weight: bold; }
+    #contador { font-size: 38px; font-weight: bold; color: #e65100; margin-top: 5px; }
+    #statusVotacao { font-weight: bold; margin-top: 5px; }
+    #aviso5min {
+      display: none;
+      margin-top: 10px;
+      padding: 10px;
+      background: #ffebee;
+      color: #c62828;
+      border-radius: 10px;
+      font-weight: bold;
+    }
+
+    /* ADMIN */
+    .admin { margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee; }
+    .admin input {
+      width: 100%;
+      padding: 13px;
+      margin-top: 10px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      font-size: 17px;
+    }
+    .admin button {
+      width: 100%;
+      padding: 13px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 10px;
+      background: #444;
+      color: white;
+      font-size: 17px;
+      cursor: pointer;
+    }
+    #painelAdmin { display: none; margin-top: 15px; }
+    #mensagemAdmin { margin-top: 10px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="pizza">🍕</div>
+  <h1>NOITE DA PIZZA</h1>
+  <div class="subtitulo">🗳️ Escolha o melhor horário!</div>
+
+  <!-- TIMER -->
+  <div class="timer">
+    <div class="timerTitulo">⏱️ TEMPO DE VOTAÇÃO</div>
+    <div id="contador">--:--:--</div>
+    <div id="statusVotacao">🔴 Votação não iniciada</div>
+    <div id="aviso5min">🚨 ATENÇÃO! FALTAM MENOS DE 5 MINUTOS!</div>
+  </div>
+
+  <!-- VOTAÇÃO -->
+  <input type="text" id="nome" class="nome" placeholder="Digite seu nome" maxlength="30">
+
+  <button class="horario" onclick="selecionarHorario('17:00', this)">⏰ 17:00</button>
+  <button class="horario" onclick="selecionarHorario('18:00', this)">⏰ 18:00</button>
+  <button class="horario" onclick="selecionarHorario('19:00', this)">⏰ 19:00</button>
+  <button class="horario" onclick="selecionarHorario('20:00', this)">⏰ 20:00</button>
+
+  <button class="votar" onclick="votar()">🍕 VOTAR</button>
+  <div id="mensagem"></div>
+
+  <!-- RESULTADOS -->
+  <div class="resultados">
+    <h2>📊 Resultado em Tempo Real</h2>
+    <div class="resultado">
+      <b>17:00 — <span id="v17">0</span> votos</b>
+      <div class="barra"><div class="progresso" id="p17"></div></div>
+    </div>
+    <div class="resultado">
+      <b>18:00 — <span id="v18">0</span> votos</b>
+      <div class="barra"><div class="progresso" id="p18"></div></div>
+    </div>
+    <div class="resultado">
+      <b>19:00 — <span id="v19">0</span> votos</b>
+      <div class="barra"><div class="progresso" id="p19"></div></div>
+    </div>
+    <div class="resultado">
+      <b>20:00 — <span id="v20">0</span> votos</b>
+      <div class="barra"><div class="progresso" id="p20"></div></div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div class="admin">
+    <h3>🔐 Administrador</h3>
+    <input type="password" id="senhaAdmin" placeholder="Senha do administrador">
+    <button onclick="entrarAdmin()">🔓 Entrar</button>
+
+    <div id="painelAdmin">
+      <p>✅ Acesso de administrador liberado.</p>
+      <button onclick="iniciarVotacao()">▶️ INICIAR VOTAÇÃO — 1 HORA</button>
+      <button onclick="zerarVotacao()" style="background:#d32f2f;">🗑️ ZERAR VOTAÇÃO</button>
+      <button onclick="sairAdmin()">🚪 Sair</button>
+    </div>
+    <div id="mensagemAdmin"></div>
+  </div>
+</div>
+
+<script>
+  /* CONFIGURAÇÕES DO SUPABASE */
+  const SUPABASE_URL = "https://henqqkbeduicorkcdnim.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_IiuC-XQU2VmDyAbC6Rl9HA_pB1KjZCu";
+  
+  // Inicializa o cliente oficial do Supabase
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let horarioEscolhido = "";
+  let administrador = false;
+  let fimVotacao = null;
+  let timerInterval = null;
+
+  /* =====================================================
+     ESCUTAR ALTERAÇÕES EM TEMPO REAL (REALTIME)
+  ===================================================== */
+  function escutarMudancas() {
+    supabase
+      .channel('votos-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'votos' }, payload => {
+        carregarVotos(); // Atualiza a contagem assim que um voto entra/muda
+      })
+      .subscribe();
+  }
+
+  function carregarTimerSalvo() {
+    const salvo = localStorage.getItem("fimVotacaoPizza");
+    if (!salvo) return;
+
+    const valor = parseInt(salvo);
+    if (isNaN(valor) || Date.now() >= valor) {
+      localStorage.removeItem("fimVotacaoPizza");
+      encerrarVotacao();
+      return;
+    }
+
+    fimVotacao = valor;
+    iniciarTimer();
+  }
+
+  function selecionarHorario(horario, botao) {
+    if (fimVotacao === null || Date.now() >= fimVotacao) {
+      mostrarMensagem("🔒 A votação não está aberta.");
+      return;
+    }
+
+    horarioEscolhido = horario;
+    document.querySelectorAll(".horario").forEach(b => b.classList.remove("selecionado"));
+    botao.classList.add("selecionado");
+  }
+
+  async function votar() {
+    if (fimVotacao === null || Date.now() >= fimVotacao) {
+      mostrarMensagem("🔒 A votação está encerrada.");
+      return;
+    }
+
+    const nome = document.getElementById("nome").value.trim();
+    if (nome === "") {
+      mostrarMensagem("⚠️ Digite seu nome!");
+      return;
+    }
+
+    if (horarioEscolhido === "") {
+      mostrarMensagem("⚠️ Escolha um horário!");
+      return;
+    }
+
+    mostrarMensagem("⏳ Registrando seu voto...");
+
+    // Envio usando a SDK do Supabase
+    const { data, error } = await supabase
+      .from('votos')
+      .insert([{ nome: nome, horario: horarioEscolhido }]);
+
+    if (error) {
+      mostrarMensagem("❌ ERRO: " + error.message);
+      return;
+    }
+
+    mostrarMensagem(`✅ Voto registrado! Obrigado, ${nome}! 🍕`);
+    document.getElementById("nome").value = "";
+    horarioEscolhido = "";
+    document.querySelectorAll(".horario").forEach(b => b.classList.remove("selecionado"));
+  }
+
+  async function carregarVotos() {
+    const { data: dados, error } = await supabase
+      .from('votos')
+      .select('horario');
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    let votos = { "17:00": 0, "18:00": 0, "19:00": 0, "20:00": 0 };
+
+    dados.forEach(voto => {
+      if (votos[voto.horario] !== undefined) {
+        votos[voto.horario]++;
+      }
+    });
+
+    mostrarResultados(votos);
+  }
+
+  function mostrarResultados(votos) {
+    let total = votos["17:00"] + votos["18:00"] + votos["19:00"] + votos["20:00"];
+
+    document.getElementById("v17").innerText = votos["17:00"];
+    document.getElementById("v18").innerText = votos["18:00"];
+    document.getElementById("v19").innerText = votos["19:00"];
+    document.getElementById("v20").innerText = votos["20:00"];
+
+    if (total === 0) {
+      document.getElementById("p17").style.width = "0%";
+      document.getElementById("p18").style.width = "0%";
+      document.getElementById("p19").style.width = "0%";
+      document.getElementById("p20").style.width = "0%";
+      return;
+    }
+
+    document.getElementById("p17").style.width = (votos["17:00"] / total * 100) + "%";
+    document.getElementById("p18").style.width = (votos["18:00"] / total * 100) + "%";
+    document.getElementById("p19").style.width = (votos["19:00"] / total * 100) + "%";
+    document.getElementById("p20").style.width = (votos["20:00"] / total * 100) + "%";
+  }
+
+  function mostrarMensagem(texto) {
+    document.getElementById("mensagem").innerHTML = texto;
+  }
+
+  async function entrarAdmin() {
+    const senha = document.getElementById("senhaAdmin").value.trim();
+    if (senha === "") {
+      document.getElementById("mensagemAdmin").innerHTML = "⚠️ Digite a senha.";
+      return;
+    }
+
+    document.getElementById("mensagemAdmin").innerHTML = "⏳ Verificando senha...";
+
+    const { data, error } = await supabase.rpc('testar_admin', { senha: senha });
+
+    if (error) {
+      document.getElementById("mensagemAdmin").innerHTML = "❌ Senha incorreta ou erro no banco.";
+      return;
+    }
+
+    administrador = true;
+    document.getElementById("painelAdmin").style.display = "block";
+    document.getElementById("mensagemAdmin").innerHTML = "✅ Administrador autenticado!";
+    document.getElementById("senhaAdmin").value = "";
+  }
+
+  async function iniciarVotacao() {
+    if (!administrador) return;
+
+    const confirmar = confirm("🍕 INICIAR VOTAÇÃO?\n\nA votação ficará aberta por 1 hora.");
+    if (!confirmar) return;
+
+    const senha = prompt("Digite a senha de administrador:");
+    if (!senha) return;
+
+    const { error } = await supabase.rpc('iniciar_votacao', { senha: senha });
+
+    if (error) {
+      document.getElementById("mensagemAdmin").innerHTML = "❌ Erro ao iniciar votação.";
+      return;
+    }
+
+    fimVotacao = Date.now() + (60 * 60 * 1000);
+    localStorage.setItem("fimVotacaoPizza", fimVotacao.toString());
+
+    iniciarTimer();
+    liberarCampos();
+    document.getElementById("mensagemAdmin").innerHTML = "✅ VOTAÇÃO INICIADA! 🍕";
+  }
+
+  function liberarCampos() {
+    document.getElementById("nome").disabled = false;
+    document.querySelectorAll(".horario").forEach(b => b.disabled = false);
+    document.querySelector(".votar").disabled = false;
+  }
+
+  function bloquearCampos() {
+    document.getElementById("nome").disabled = true;
+    document.querySelectorAll(".horario").forEach(b => {
+      b.disabled = true;
+      b.classList.remove("selecionado");
+    });
+    document.querySelector(".votar").disabled = true;
+    horarioEscolhido = "";
+  }
+
+  function iniciarTimer() {
+    if (timerInterval !== null) clearInterval(timerInterval);
+    liberarCampos();
+    atualizarTimer();
+    timerInterval = setInterval(atualizarTimer, 1000);
+  }
+
+  function atualizarTimer() {
+    if (fimVotacao === null) {
+      document.getElementById("contador").innerText = "--:--:--";
+      return;
+    }
+
+    const restante = fimVotacao - Date.now();
+    if (restante <= 0) {
+      encerrarVotacao();
+      return;
+    }
+
+    const totalSegundos = Math.floor(restante / 1000);
+    const horas = Math.floor(totalSegundos / 3600);
+    const minutos = Math.floor((totalSegundos % 3600) / 60);
+    const segundos = totalSegundos % 60;
+
+    document.getElementById("contador").innerText =
+      `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}:${String(segundos).padStart(2, "0")}`;
+
+    document.getElementById("statusVotacao").innerText = "🟢 VOTAÇÃO ABERTA";
+    document.getElementById("aviso5min").style.display = (restante <= 5 * 60 * 1000) ? "block" : "none";
+  }
+
+  function encerrarVotacao() {
+    fimVotacao = null;
+    localStorage.removeItem("fimVotacaoPizza");
+
+    if (timerInterval !== null) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    document.getElementById("contador").innerText = "00:00:00";
+    document.getElementById("statusVotacao").innerText = "🔒 VOTAÇÃO ENCERRADA";
+    document.getElementById("aviso5min").style.display = "none";
+
+    bloquearCampos();
+    mostrarMensagem("🔒 A votação foi encerrada. 🍕");
+  }
+
+  async function zerarVotacao() {
+    if (!administrador) return;
+
+    const confirmar = confirm("⚠️ ATENÇÃO!\n\nIsso vai apagar TODOS os votos.");
+    if (!confirmar) return;
+
+    const senha = prompt("Digite a senha de administrador para confirmar:");
+    if (!senha) return;
+
+    const { error } = await supabase.rpc('zerar_votacao', { senha: senha });
+
+    if (error) {
+      document.getElementById("mensagemAdmin").innerHTML = "❌ ERRO AO ZERAR: " + error.message;
+      return;
+    }
+
+    document.getElementById("mensagemAdmin").innerHTML = "✅ VOTAÇÃO ZERADA COM SUCESSO! 🍕";
+    carregarVotos();
+  }
+
+  function sairAdmin() {
+    administrador = false;
+    document.getElementById("painelAdmin").style.display = "none";
+    document.getElementById("mensagemAdmin").innerHTML = "🚪 Você saiu do modo administrador.";
+  }
+
+  // Inicialização
+  carregarVotos();
+  carregarTimerSalvo();
+  escutarMudancas();
+</script>
+
+</body>
+</html>
